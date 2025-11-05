@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estudos Fluxo em Grafos</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            background: linear-gradient(to bottom right, #eff6ff, #a5b4fc);
+        }
+        #sidebar {
+            width: 300px;
+            padding: 20px;
+            background: white;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+            overflow-y: auto;
+        }
+        #canvas-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .canvas-section {
+            margin-bottom: 20px;
+        }
+        canvas {
+            border: 2px solid #d1d5db;
+            background: white;
+            cursor: crosshair;
+        }
+        button {
+            display: block;
+            width: 100%;
+            margin: 10px 0;
+            padding: 10px;
+            background: #4f46e5;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #4338ca;
+        }
+        .mode-btn {
+            width: auto;
+            display: inline-block;
+            margin-right: 5px;
+        }
+        .active {
+            background: #312e81;
+        }
+        #results {
+            margin-top: 20px;
+            padding: 10px;
+            background: #f3f4f6;
+            border-radius: 5px;
+        }
+        #steps {
+            margin-top: 20px;
+            padding: 10px;
+            background: #e0f2fe;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        #theory {
+            margin-bottom: 20px;
+            padding: 10px;
+            background: #e0e7ff;
+            border-radius: 5px;
+        }
+        /* NOVA ESTILIZAÇÃO: Bloco verde de boas-vindas */
+        .welcome-box {
+            background: #d1fae5;
+            border-left: 6px solid #10b981;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #065f46;
+        }
+        .welcome-box h3 {
+            margin-top: 0;
+            color: #059669;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div id="sidebar">
+        <h1>Estudos de Fluxo em Grafos</h1>
+
+        <!-- BLOCO VERDE DE BEM-VINDO (ADICIONADO AQUI) -->
+        <div class="welcome-box">
+            <h3>Bem-vindo ao Estudo de Fluxo em Grafos!</h3>
+            <p>
+                Nesse exemplo o grafo representa uma <strong>malha rodoviária</strong>. 
+                Os números entre parênteses mostram o <strong>número máximo de veículos</strong> que podem passar pelas estradas (Arestas).
+            </p>
+            <p>
+                <strong>Pergunta:</strong> Quantos carros podem passar do ponto <code>s</code> ao ponto <code>t</code>? 
+                Ou seja, qual o <strong>fluxo máximo</strong> de veículos neste grafo?
+            </p>
+           
+        </div>
+
+        <div id="theory">
+            <h3>Conceitos Principais</h3>
+            <p>Fluxo em Rede: Transferência de recursos de s a t.</p>
+            <p>Capacidade: Máximo por aresta.</p>
+            <p>Fluxo Máximo = Corte Mínimo.</p>
+            <button onclick="toggleTheory()">Mostrar Mais</button>
+            <div id="full-theory" style="display:none;">
+                <p>Propriedades: Restrição de capacidade, anti-simetria, conservação.</p>
+                <p>Rede Residual: Para caminhos aumentantes.</p>
+            </div>
+        </div>
+        
+        <h3>Modo:</h3>
+        <button class="mode-btn active" onclick="setMode('add-node')">Adicionar Nó</button>
+        <button class="mode-btn" onclick="setMode('add-edge')">Adicionar Aresta</button>
+        <button class="mode-btn" onclick="setMode('move')">Mover</button>
+        
+        <h3>Definir (selecione nó):</h3>
+        <button onclick="setNodeType('source')">Origem (s)</button>
+        <button onclick="setNodeType('target')">Sumidouro (t)</button>
+        
+        <h3>Remover (selecione nó):</h3>
+        <button onclick="removeSelectedNode()">Remover Nó</button>
+        <button onclick="removeSelectedEdge()">Remover Aresta</button>
+        
+        <button onclick="runFordFulkerson()">Executar Tudo</button>
+        <button onclick="stepFordFulkerson()">Próximo Passo</button>
+        
+        <div id="results"></div>
+        
+        <div id="steps"></div>
+        
+        <button onclick="resetAlgorithm()">Resetar Algoritmo</button>
+        <button onclick="resetGraph()">Reset Fluxo</button>
+        <button onclick="clearAll()">Limpar Tudo</button>
+        
+        <h3>Exemplos:</h3>
+        <button onclick="loadExample(1)">Ex. Principal</button>
+        <button onclick="loadExample(2)">Ex. Simples</button>
+        <button onclick="loadExample(3)">Ex. Rodoviário</button>
+        <button onclick="loadExample(4)">Ex. Backward</button>
+        
+        <div style="margin-top:20px; font-size:12px;">
+            <h4>Legenda:</h4>
+            <p><span style="color:green">●</span> Origem</p>
+            <p><span style="color:orange">●</span> Sumidouro</p>
+            <p><span style="color:blue">●</span> Nó intermediário</p>
+            <p style="color:gray">— Sem fluxo</p>
+            <p style="color:blue">— Com fluxo</p>
+            <p style="color:red">— Saturado</p>
+            <p style="color:red; text-decoration:dotted underline;">Corte mínimo</p>
+        </div>
+    </div>
+    
+    <div id="canvas-container">
+        <div class="canvas-section">
+            <h3>Grafo com Fluxo</h3>
+            <canvas id="graph-canvas" width="1000" height="800"></canvas>
+        </div>
+        <div class="canvas-section">
+            <h3>Rede Residual</h3>
+            <canvas id="residual-canvas" width="1000" height="800"></canvas>
+        </div>
+    </div>
+    
+    <script>
+        const canvas = document.getElementById('graph-canvas');
+        const ctx = canvas.getContext('2d');
+        const residualCanvas = document.getElementById('residual-canvas');
+        const ctxResidual = residualCanvas.getContext('2d');
+        const NODE_RADIUS = 30;
+        const OFFSET = 10;
+        
+        let nodes = [];
+        let edges = [];
+        let selectedNode = null;
+        let sourceNode = null;
+        let targetNode = null;
+        let draggedNode = null;
+        let mode = 'add-node';
+        let maxFlow = 0;
+        let augmentingPaths = [];
+        let minCut = null;
+        let stepsLog = [];
+        let algorithmState = null;
+        
+        function drawGraph() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            edges.forEach(edge => {
+                const from = nodes.find(n => n.id === edge.from);
+                const to = nodes.find(n => n.id === edge.to);
+                if (!from || !to) return;
+                
+                const angle = Math.atan2(to.y - from.y, to.x - from.x);
+                const absFlow = Math.abs(edge.flow);
+                const ratio = absFlow / edge.capacity;
+                
+                ctx.beginPath();
+                ctx.moveTo(from.x, from.y);
+                ctx.lineTo(to.x, to.y);
+                ctx.strokeStyle = ratio >= 1 ? '#ef4444' : absFlow > 0 ? '#3b82f6' : '#6b7280';
+                ctx.lineWidth = ratio >= 1 ? 4 : absFlow > 0 ? 3 : 2;
+                ctx.stroke();
+                
+                let endX = to.x - NODE_RADIUS * Math.cos(angle);
+                let endY = to.y - NODE_RADIUS * Math.sin(angle);
+                if (edge.flow < 0) {
+                    endX = from.x + NODE_RADIUS * Math.cos(angle);
+                    endY = from.y + NODE_RADIUS * Math.sin(angle);
+                    angle += Math.PI;
+                }
+                const arrowSize = 12;
+                ctx.beginPath();
+                ctx.moveTo(endX, endY);
+                ctx.lineTo(endX - arrowSize * Math.cos(angle - Math.PI/6), endY - arrowSize * Math.sin(angle - Math.PI/6));
+                ctx.moveTo(endX, endY);
+                ctx.lineTo(endX - arrowSize * Math.cos(angle + Math.PI/6), endY - arrowSize * Math.sin(angle + Math.PI/6));
+                ctx.stroke();
+                
+                const midX = (from.x + to.x)/2;
+                const midY = (from.y + to.y)/2;
+                ctx.fillStyle = 'white';
+                ctx.fillRect(midX-30, midY-15, 60, 30);
+                ctx.fillStyle = absFlow > 0 ? '#3b82f6' : '#374151';
+                ctx.font = 'bold 14px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(`${absFlow}/${edge.capacity}`, midX, midY);
+                if (edge.flow < 0) ctx.fillText('(rev)', midX, midY + 15);
+            });
+            
+            if (minCut) {
+                ctx.save();
+                ctx.setLineDash([10,5]);
+                ctx.strokeStyle = '#ef4444';
+                ctx.lineWidth = 3;
+                edges.filter(e => minCut.S.includes(e.from) && minCut.T.includes(e.to)).forEach(edge => {
+                    const from = nodes.find(n => n.id === edge.from);
+                    const to = nodes.find(n => n.id === edge.to);
+                    if (from && to) {
+                        ctx.beginPath();
+                        ctx.moveTo(from.x, from.y);
+                        ctx.lineTo(to.x, to.y);
+                        ctx.stroke();
+                    }
+                });
+                ctx.restore();
+            }
+            
+            nodes.forEach(node => {
+                ctx.beginPath();
+                ctx.arc(node.x, node.y, NODE_RADIUS, 0, Math.PI*2);
+                ctx.fillStyle = node.id === sourceNode ? '#22c55e' : node.id === targetNode ? '#f59e0b' : '#3b82f6';
+                ctx.fill();
+                ctx.strokeStyle = node.id === selectedNode ? '#fbbf24' : '#1e40af';
+                ctx.lineWidth = node.id === selectedNode ? 4 : 2;
+                ctx.stroke();
+                
+                ctx.fillStyle = 'white';
+                ctx.font = 'bold 16px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(node.label, node.x, node.y);
+            });
+            
+            drawResidual();
+        }
+        
+        function drawResidual() {
+            ctxResidual.clearRect(0, 0, residualCanvas.width, residualCanvas.height);
+            
+            nodes.forEach(node => {
+                ctxResidual.beginPath();
+                ctxResidual.arc(node.x, node.y, NODE_RADIUS, 0, Math.PI*2);
+                ctxResidual.fillStyle = node.id === sourceNode ? '#22c55e' : node.id === targetNode ? '#f59e0b' : '#3b82f6';
+                ctxResidual.fill();
+                ctxResidual.strokeStyle = node.id === selectedNode ? '#fbbf24' : '#1e40af';
+                ctxResidual.lineWidth = node.id === selectedNode ? 4 : 2;
+                ctxResidual.stroke();
+                
+                ctxResidual.fillStyle = 'white';
+                ctxResidual.font = 'bold 16px Arial';
+                ctxResidual.textAlign = 'center';
+                ctxResidual.textBaseline = 'middle';
+                ctxResidual.fillText(node.label, node.x, node.y);
+            });
+            
+            edges.forEach(edge => {
+                const from = nodes.find(n => n.id === edge.from);
+                const to = nodes.find(n => n.id === edge.to);
+                if (!from || !to) return;
+                
+                const dx = to.x - from.x;
+                const dy = to.y - from.y;
+                const len = Math.hypot(dx, dy);
+                const nx = dy / len * OFFSET;
+                const ny = -dx / len * OFFSET;
+                
+                const rf = edge.capacity - edge.flow;
+                const rb = edge.flow;
+                
+                if (rf > 0) {
+                    const angle = Math.atan2(to.y - from.y, to.x - from.x);
+                    ctxResidual.beginPath();
+                    ctxResidual.moveTo(from.x + nx, from.y + ny);
+                    ctxResidual.lineTo(to.x + nx, to.y + ny);
+                    ctxResidual.strokeStyle = '#6b7280';
+                    ctxResidual.lineWidth = 2;
+                    ctxResidual.stroke();
+                    
+                    const arrowSize = 12;
+                    const endX = to.x + nx - NODE_RADIUS * Math.cos(angle);
+                    const endY = to.y + ny - NODE_RADIUS * Math.sin(angle);
+                    ctxResidual.beginPath();
+                    ctxResidual.moveTo(endX, endY);
+                    ctxResidual.lineTo(endX - arrowSize * Math.cos(angle - Math.PI/6), endY - arrowSize * Math.sin(angle - Math.PI/6));
+                    ctxResidual.moveTo(endX, endY);
+                    ctxResidual.lineTo(endX - arrowSize * Math.cos(angle + Math.PI/6), endY - arrowSize * Math.sin(angle + Math.PI/6));
+                    ctxResidual.stroke();
+                    
+                    const midX = (from.x + to.x)/2 + nx;
+                    const midY = (from.y + to.y)/2 + ny;
+                    ctxResidual.fillStyle = 'white';
+                    ctxResidual.fillRect(midX-20, midY-10, 40, 20);
+                    ctxResidual.fillStyle = '#374151';
+                    ctxResidual.font = 'bold 12px Arial';
+                    ctxResidual.textAlign = 'center';
+                    ctxResidual.textBaseline = 'middle';
+                    ctxResidual.fillText(rf, midX, midY);
+                }
+                
+                if (rb > 0) {
+                    const angle = Math.atan2(from.y - to.y, from.x - to.x);
+                    ctxResidual.beginPath();
+                    ctxResidual.moveTo(to.x - nx, to.y - ny);
+                    ctxResidual.lineTo(from.x - nx, from.y - ny);
+                    ctxResidual.strokeStyle = '#6b7280';
+                    ctxResidual.lineWidth = 2;
+                    ctxResidual.setLineDash([5,5]);
+                    ctxResidual.stroke();
+                    ctxResidual.setLineDash([]);
+                    
+                    const arrowSize = 12;
+                    const endX = from.x - nx - NODE_RADIUS * Math.cos(angle);
+                    const endY = from.y - ny - NODE_RADIUS * Math.sin(angle);
+                    ctxResidual.beginPath();
+                    ctxResidual.moveTo(endX, endY);
+                    ctxResidual.lineTo(endX - arrowSize * Math.cos(angle - Math.PI/6), endY - arrowSize * Math.sin(angle - Math.PI/6));
+                    ctxResidual.moveTo(endX, endY);
+                    ctxResidual.lineTo(endX - arrowSize * Math.cos(angle + Math.PI/6), endY - arrowSize * Math.sin(angle + Math.PI/6));
+                    ctxResidual.stroke();
+                    
+                    const midX = (to.x + from.x)/2 - nx;
+                    const midY = (to.y + from.y)/2 - ny;
+                    ctxResidual.fillStyle = 'white';
+                    ctxResidual.fillRect(midX-20, midY-10, 40, 20);
+                    ctxResidual.fillStyle = '#374151';
+                    ctxResidual.font = 'bold 12px Arial';
+                    ctxResidual.textAlign = 'center';
+                    ctxResidual.textBaseline = 'middle';
+                    ctxResidual.fillText(rb, midX, midY);
+                }
+            });
+        }
+        
+        canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const clickedNode = nodes.find(n => Math.hypot(n.x - x, n.y - y) < NODE_RADIUS);
+            
+            if (mode === 'add-node' && !clickedNode) {
+                const id = `v${nodes.length + 1}`;
+                nodes.push({id, label: id, x, y});
+                drawGraph();
+            } else if (mode === 'add-edge' && clickedNode) {
+                if (!selectedNode) {
+                    selectedNode = clickedNode.id;
+                } else if (selectedNode !== clickedNode.id) {
+                    const capacity = prompt('Capacidade:', '10');
+                    const cap = parseInt(capacity);
+                    if (cap > 0 && !edges.find(e => e.from === selectedNode && e.to === clickedNode.id)) {
+                        edges.push({id: `e${edges.length+1}`, from: selectedNode, to: clickedNode.id, capacity: cap, flow: 0});
+                    }
+                    selectedNode = null;
+                }
+                drawGraph();
+            } else if (clickedNode) {
+                selectedNode = clickedNode.id;
+                drawGraph();
+            }
+        });
+        
+        let isDragging = false;
+        canvas.addEventListener('mousedown', (e) => {
+            if (mode !== 'move') return;
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const clicked = nodes.find(n => Math.hypot(n.x - x, n.y - y) < NODE_RADIUS);
+            if (clicked) {
+                draggedNode = clicked.id;
+                isDragging = true;
+            }
+        });
+        
+        canvas.addEventListener('mousemove', (e) => {
+            if (!isDragging || !draggedNode) return;
+            const rect = canvas.getBoundingClientRect();
+            const x = Math.max(NODE_RADIUS, Math.min(e.clientX - rect.left, canvas.width - NODE_RADIUS));
+            const y = Math.max(NODE_RADIUS, Math.min(e.clientY - rect.top, canvas.height - NODE_RADIUS));
+            const node = nodes.find(n => n.id === draggedNode);
+            node.x = x;
+            node.y = y;
+            drawGraph();
+        });
+        
+        canvas.addEventListener('mouseup', () => {
+            isDragging = false;
+            draggedNode = null;
+        });
+        
+        canvas.addEventListener('mouseleave', () => {
+            isDragging = false;
+            draggedNode = null;
+        });
+        
+        function setMode(newMode) {
+            mode = newMode;
+            selectedNode = null;
+            document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelector(`button[onclick="setMode('${newMode}')"]`).classList.add('active');
+            drawGraph();
+        }
+        
+        function setNodeType(type) {
+            if (!selectedNode) return alert('Selecione um nó!');
+            if (type === 'source') sourceNode = selectedNode;
+            else if (type === 'target') targetNode = selectedNode;
+            selectedNode = null;
+            drawGraph();
+        }
+        
+        function removeSelectedNode() {
+            if (!selectedNode) return alert('Selecione um nó!');
+            nodes = nodes.filter(n => n.id !== selectedNode);
+            edges = edges.filter(e => e.from !== selectedNode && e.to !== selectedNode);
+            if (sourceNode === selectedNode) sourceNode = null;
+            if (targetNode === selectedNode) targetNode = null;
+            selectedNode = null;
+            drawGraph();
+        }
+        
+        function removeSelectedEdge() {
+            if (!selectedNode) return alert('Selecione um nó!');
+            let connected = edges.filter(e => e.from === selectedNode || e.to === selectedNode);
+            if (connected.length === 0) return alert('Nenhuma aresta conectada!');
+            if (connected.length === 1) {
+                edges = edges.filter(e => e.id !== connected[0].id);
+            } else {
+                const choices = connected.map((e,i) => `${i+1}. ${e.from} -> ${e.to} (${e.capacity})`).join('\n');
+                const choice = prompt(`Escolha:\n${choices}`);
+                const idx = parseInt(choice) - 1;
+                if (idx >= 0 && idx < connected.length) {
+                    edges = edges.filter(e => e.id !== connected[idx].id);
+                }
+            }
+            drawGraph();
+        }
+        
+        function runFordFulkerson() {
+            if (algorithmState) {
+                alert('Modo passo a passo em andamento. Resete primeiro!');
+                return;
+            }
+            if (!sourceNode || !targetNode) return alert('Defina s e t!');
+            let flow = 0;
+            augmentingPaths = [];
+            stepsLog = [];
+            let residual = edges.map(e => ({...e}));
+            
+            stepsLog.push('Iniciando o algoritmo de Ford-Fulkerson. Procurando caminhos aumentantes na rede residual até não encontrar mais.');
+            
+            function findPath(res) {
+                const visited = new Set();
+                const queue = [{node: sourceNode, path: [sourceNode]}];
+                visited.add(sourceNode);
+                
+                while (queue.length) {
+                    const {node, path} = queue.shift();
+                    if (node === targetNode) return path;
+                    
+                    res.forEach(e => {
+                        if (e.from === node && e.capacity - e.flow > 0 && !visited.has(e.to)) {
+                            visited.add(e.to);
+                            queue.push({node: e.to, path: [...path, e.to]});
+                        }
+                    });
+                    
+                    res.forEach(e => {
+                        if (e.to === node && e.flow > 0 && !visited.has(e.from)) {
+                            visited.add(e.from);
+                            queue.push({node: e.from, path: [...path, e.from]});
+                        }
+                    });
+                }
+                return null;
+            }
+            
+            let path;
+            let iteration = 1;
+            while ((path = findPath(residual)) !== null) {
+                stepsLog.push(`Iteração ${iteration}: Caminho aumentante encontrado: ${path.join(' → ')}.`);
+                
+                let minCap = Infinity;
+                let edgeUpdates = [];
+                for (let i = 0; i < path.length - 1; i++) {
+                    const u = path[i], v = path[i+1];
+                    let e = residual.find(e => e.from === u && e.to === v);
+                    if (e) {
+                        const res = e.capacity - e.flow;
+                        minCap = Math.min(minCap, res);
+                        edgeUpdates.push(`Aresta forward ${u} → ${v}: capacidade residual ${res}`);
+                    } else {
+                        e = residual.find(e => e.from === v && e.to === u);
+                        const res = e.flow;
+                        minCap = Math.min(minCap, res);
+                        edgeUpdates.push(`Aresta backward ${v} → ${u}: fluxo existente ${res}`);
+                    }
+                }
+                
+                stepsLog.push(`Capacidade residual mínima no caminho: ${minCap}.`);
+                stepsLog.push(`Atualizações nas arestas: ${edgeUpdates.join('; ')}`);
+                
+                for (let i = 0; i < path.length - 1; i++) {
+                    const u = path[i], v = path[i+1];
+                    let e = residual.find(e => e.from === u && e.to === v);
+                    if (e) {
+                        e.flow += minCap;
+                    } else {
+                        e = residual.find(e => e.from === v && e.to === u);
+                        e.flow -= minCap;
+                    }
+                }
+                
+                flow += minCap;
+                augmentingPaths.push({path, flow: minCap});
+                stepsLog.push(`Fluxo aumentado em ${minCap}. Fluxo total agora: ${flow}.`);
+                iteration++;
+            }
+            
+            stepsLog.push('Nenhum caminho aumentante mais encontrado. Fluxo máximo alcançado.');
+            
+            edges = residual;
+            maxFlow = flow;
+            calculateMinCut(residual);
+            stepsLog.push(`Corte mínimo: S = {${minCut.S.join(', ')}}, T = {${minCut.T.join(', ')}}. Capacidade do corte = ${flow}.`);
+            
+            updateResults();
+            drawGraph();
+        }
+        
+        function stepFordFulkerson() {
+            if (!sourceNode || !targetNode) return alert('Defina s e t!');
+            
+            if (!algorithmState || algorithmState.finished) {
+                algorithmState = {
+                    flow: 0,
+                    augmentingPaths: [],
+                    stepsLog: [],
+                    residual: edges.map(e => ({...e})),
+                    finished: false,
+                    iteration: 1
+                };
+                algorithmState.stepsLog.push('Iniciando modo passo a passo do algoritmo de Ford-Fulkerson.');
+            }
+            
+            if (algorithmState.finished) {
+                alert('Algoritmo já finalizado. Resete para começar novamente.');
+                return;
+            }
+            
+            function findPath(res) {
+                const visited = new Set();
+                const queue = [{node: sourceNode, path: [sourceNode]}];
+                visited.add(sourceNode);
+                
+                while (queue.length) {
+                    const {node, path} = queue.shift();
+                    if (node === targetNode) return path;
+                    
+                    res.forEach(e => {
+                        if (e.from === node && e.capacity - e.flow > 0 && !visited.has(e.to)) {
+                            visited.add(e.to);
+                            queue.push({node: e.to, path: [...path, e.to]});
+                        }
+                    });
+                    
+                    res.forEach(e => {
+                        if (e.to === node && e.flow > 0 && !visited.has(e.from)) {
+                            visited.add(e.from);
+                            queue.push({node: e.from, path: [...path, e.from]});
+                        }
+                    });
+                }
+                return null;
+            }
+            
+            const path = findPath(algorithmState.residual);
+            
+            if (path === null) {
+                algorithmState.finished = true;
+                calculateMinCut(algorithmState.residual);
+                algorithmState.stepsLog.push('Nenhum caminho aumentante mais encontrado. Fluxo máximo alcançado.');
+                algorithmState.stepsLog.push(`Corte mínimo: S = {${minCut.S.join(', ')}}, T = {${minCut.T.join(', ')}}. Capacidade do corte = ${algorithmState.flow}.`);
+                
+                edges = algorithmState.residual;
+                maxFlow = algorithmState.flow;
+                augmentingPaths = algorithmState.augmentingPaths;
+                minCut = algorithmState.minCut;
+                
+                updateResults();
+                drawGraph();
+                return;
+            }
+            
+            algorithmState.stepsLog.push(`Iteração ${algorithmState.iteration}: Caminho aumentante encontrado: ${path.join(' → ')}.`);
+            
+            let minCap = Infinity;
+            let edgeUpdates = [];
+            for (let i = 0; i < path.length - 1; i++) {
+                const u = path[i], v = path[i+1];
+                let e = algorithmState.residual.find(e => e.from === u && e.to === v);
+                if (e) {
+                    const res = e.capacity - e.flow;
+                    minCap = Math.min(minCap, res);
+                    edgeUpdates.push(`Aresta forward ${u} → ${v}: capacidade residual ${res}`);
+                } else {
+                    e = algorithmState.residual.find(e => e.from === v && e.to === u);
+                    const res = e.flow;
+                    minCap = Math.min(minCap, res);
+                    edgeUpdates.push(`Aresta backward ${v} → ${u}: fluxo existente ${res}`);
+                }
+            }
+            
+            algorithmState.stepsLog.push(`Capacidade residual mínima no caminho: ${minCap}.`);
+            algorithmState.stepsLog.push(`Atualizações nas arestas: ${edgeUpdates.join('; ')}`);
+            
+            for (let i = 0; i < path.length - 1; i++) {
+                const u = path[i], v = path[i+1];
+                let e = algorithmState.residual.find(e => e.from === u && e.to === v);
+                if (e) {
+                    e.flow += minCap;
+                } else {
+                    e = algorithmState.residual.find(e => e.from === v && e.to === u);
+                    e.flow -= minCap;
+                }
+            }
+            
+            algorithmState.flow += minCap;
+            algorithmState.augmentingPaths.push({path, flow: minCap});
+            algorithmState.stepsLog.push(`Fluxo aumentado em ${minCap}. Fluxo total agora: ${algorithmState.flow}.`);
+            algorithmState.iteration++;
+            
+            edges = algorithmState.residual.map(e => ({...e}));
+            maxFlow = algorithmState.flow;
+            augmentingPaths = [...algorithmState.augmentingPaths];
+            stepsLog = [...algorithmState.stepsLog];
+            
+            updateResults();
+            drawGraph();
+        }
+        
+        function resetAlgorithm() {
+            maxFlow = 0;
+            augmentingPaths = [];
+            minCut = null;
+            stepsLog = [];
+            algorithmState = null;
+            document.getElementById('results').innerHTML = '';
+            document.getElementById('steps').innerHTML = '';
+            edges = edges.map(e => ({...e, flow: 0}));
+            drawGraph();
+        }
+        
+        function calculateMinCut(residual) {
+            const visited = new Set();
+            const queue = [sourceNode];
+            visited.add(sourceNode);
+            
+            while (queue.length) {
+                const node = queue.shift();
+                residual.forEach(e => {
+                    if (e.from === node && e.capacity - e.flow > 0 && !visited.has(e.to)) {
+                        visited.add(e.to);
+                        queue.push(e.to);
+                    }
+                    if (e.to === node && e.flow > 0 && !visited.has(e.from)) {
+                        visited.add(e.from);
+                        queue.push(e.from);
+                    }
+                });
+            }
+            
+            const S = Array.from(visited);
+            const T = nodes.map(n => n.id).filter(id => !S.includes(id));
+            if (algorithmState) {
+                algorithmState.minCut = {S, T};
+            } else {
+                minCut = {S, T};
+            }
+        }
+        
+        function updateResults() {
+            const isStepMode = !!algorithmState;
+            const currentFlow = isStepMode ? algorithmState.flow : maxFlow;
+            const currentPaths = isStepMode ? algorithmState.augmentingPaths : augmentingPaths;
+            const currentMinCut = isStepMode ? algorithmState.minCut : minCut;
+            const currentSteps = isStepMode ? algorithmState.stepsLog : stepsLog;
+            
+            const results = document.getElementById('results');
+            results.innerHTML = `
+                <h3>Resultado ${isStepMode && !algorithmState.finished ? '(Parcial)' : ''}:</h3>
+                <p>Fluxo Atual: ${currentFlow}</p>
+                <h4>Caminhos Aumentantes:</h4>
+                ${currentPaths.map(p => `<p>${p.path.join(' → ')} (aumento: ${p.flow})</p>`).join('')}
+                ${currentMinCut ? `
+                    <h4>Corte Mínimo:</h4>
+                    <p>S = {${currentMinCut.S.join(', ')}}</p>
+                    <p>T = {${currentMinCut.T.join(', ')}}</p>
+                ` : ''}
+            `;
+            
+            const stepsDiv = document.getElementById('steps');
+            stepsDiv.innerHTML = `
+                <h3>Explicação Passo a Passo:</h3>
+                ${currentSteps.map(step => `<p>${step}</p>`).join('')}
+            `;
+        }
+        
+        function resetGraph() {
+            edges = edges.map(e => ({...e, flow: 0}));
+            maxFlow = 0;
+            augmentingPaths = [];
+            minCut = null;
+            stepsLog = [];
+            algorithmState = null;
+            document.getElementById('results').innerHTML = '';
+            document.getElementById('steps').innerHTML = '';
+            drawGraph();
+        }
+        
+        function clearAll() {
+            nodes = [];
+            edges = [];
+            sourceNode = null;
+            targetNode = null;
+            selectedNode = null;
+            maxFlow = 0;
+            augmentingPaths = [];
+            minCut = null;
+            stepsLog = [];
+            algorithmState = null;
+            document.getElementById('results').innerHTML = '';
+            document.getElementById('steps').innerHTML = '';
+            drawGraph();
+        }
+        
+        function loadExample(num) {
+            resetGraph();
+            clearAll();
+            
+            if (num === 1) {
+                nodes = [
+                    {id: 's', label: 's', x: 100, y: 250},
+                    {id: 'v1', label: 'v1', x: 250, y: 150},
+                    {id: 'v2', label: 'v2', x: 250, y: 350},
+                    {id: 'v3', label: 'v3', x: 400, y: 150},
+                    {id: 'v4', label: 'v4', x: 400, y: 350},
+                    {id: 't', label: 't', x: 550, y: 250}
+                ];
+                edges = [
+                    {id: 'e1', from: 's', to: 'v1', capacity: 16, flow: 0},
+                    {id: 'e2', from: 's', to: 'v2', capacity: 13, flow: 0},
+                    {id: 'e3', from: 'v1', to: 'v3', capacity: 12, flow: 0},
+                    {id: 'e4', from: 'v2', to: 'v1', capacity: 4, flow: 0},
+                    {id: 'e5', from: 'v2', to: 'v4', capacity: 14, flow: 0},
+                    {id: 'e6', from: 'v3', to: 'v2', capacity: 9, flow: 0},
+                    {id: 'e7', from: 'v3', to: 't', capacity: 20, flow: 0},
+                    {id: 'e8', from: 'v4', to: 'v3', capacity: 7, flow: 0},
+                    {id: 'e9', from: 'v4', to: 't', capacity: 4, flow: 0}
+                ];
+                sourceNode = 's';
+                targetNode = 't';
+            } else if (num === 2) {
+                nodes = [
+                    {id: 's', label: 's', x: 100, y: 200},
+                    {id: 'a', label: 'a', x: 250, y: 150},
+                    {id: 'b', label: 'b', x: 250, y: 250},
+                    {id: 't', label: 't', x: 400, y: 200}
+                ];
+                edges = [
+                    {id: 'e1', from: 's', to: 'a', capacity: 10, flow: 0},
+                    {id: 'e2', from: 's', to: 'b', capacity: 10, flow: 0},
+                    {id: 'e3', from: 'a', to: 't', capacity: 10, flow: 0},
+                    {id: 'e4', from: 'b', to: 't', capacity: 10, flow: 0}
+                ];
+                sourceNode = 's';
+                targetNode = 't';
+            } else if (num === 3) {
+                nodes = [
+                    {id: 's', label: 's', x: 100, y: 300},
+                    {id: 'a', label: 'a', x: 250, y: 150},
+                    {id: 'c', label: 'c', x: 250, y: 450},
+                    {id: 'b', label: 'b', x: 400, y: 150},
+                    {id: 'd', label: 'd', x: 400, y: 450},
+                    {id: 't', label: 't', x: 550, y: 300}
+                ];
+                edges = [
+                    {id: 'e1', from: 's', to: 'a', capacity: 50, flow: 0},
+                    {id: 'e2', from: 's', to: 'c', capacity: 40, flow: 0},
+                    {id: 'e3', from: 'a', to: 'b', capacity: 60, flow: 0},
+                    {id: 'e4', from: 'c', to: 'd', capacity: 60, flow: 0},
+                    {id: 'e5', from: 'b', to: 't', capacity: 30, flow: 0},
+                    {id: 'e6', from: 'd', to: 't', capacity: 50, flow: 0},
+                    {id: 'e7', from: 'a', to: 'd', capacity: 70, flow: 0}
+                ];
+                sourceNode = 's';
+                targetNode = 't';
+            } else if (num === 4) {
+                nodes = [
+                    {id: 's', label: 's', x: 100, y: 250},
+                    {id: 'a', label: 'a', x: 250, y: 150},
+                    {id: 'b', label: 'b', x: 250, y: 350},
+                    {id: 't', label: 't', x: 400, y: 250}
+                ];
+                edges = [
+                    {id: 'e1', from: 's', to: 'a', capacity: 3, flow: 0},
+                    {id: 'e2', from: 's', to: 'b', capacity: 3, flow: 0},
+                    {id: 'e3', from: 'a', to: 't', capacity: 2, flow: 0},
+                    {id: 'e4', from: 'b', to: 't', capacity: 2, flow: 0},
+                    {id: 'e5', from: 'a', to: 'b', capacity: 3, flow: 0}
+                ];
+                sourceNode = 's';
+                targetNode = 't';
+            }
+            drawGraph();
+        }
+        
+        function toggleTheory() {
+            const full = document.getElementById('full-theory');
+            full.style.display = full.style.display === 'none' ? 'block' : 'none';
+        }
+        
+        drawGraph();
+    </script>
+</body>
+</html>
